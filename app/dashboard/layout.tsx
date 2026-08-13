@@ -22,6 +22,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <Link href="/dashboard/assets" className="nav-link">Activos</Link>
           <Link href="/dashboard/plans" className="nav-link">Planes de mantenimiento</Link>
           <Link href="/dashboard/work-orders" className="nav-link">Órdenes de trabajo</Link>
+          <Link href="/dashboard/hydraulics" className="nav-link">Control hidráulico</Link>
+          <Link href="/dashboard/settings/measurements" className="nav-link">Nominales y parámetros</Link>
           <span className="nav-link nav-disabled">Inventario</span>
           <span className="nav-link nav-disabled">Reportes</span>
         </nav>

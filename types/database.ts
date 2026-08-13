@@ -13,8 +13,23 @@ export type WorkOrderStatus =
 
 export type AssetStatus = 'operational' | 'maintenance' | 'stopped' | 'retired'
 export type AssetCriticality = 'low' | 'medium' | 'high' | 'critical'
-export type LocationType = 'area' | 'system' | 'sector' | 'room' | 'line' | 'warehouse' | 'other'
+export type LocationType =
+  | 'farm'
+  | 'area'
+  | 'system'
+  | 'sector'
+  | 'parcel'
+  | 'lot'
+  | 'pumping_station'
+  | 'hydraulic_zone'
+  | 'room'
+  | 'line'
+  | 'warehouse'
+  | 'other'
 export type MaintenanceTriggerType = 'calendar' | 'meter' | 'condition'
+export type MeasurementSourceType = 'manual' | 'import' | 'api' | 'sensor'
+export type MeasurementSessionStatus = 'draft' | 'submitted' | 'validated' | 'cancelled'
+export type MeasurementComplianceStatus = 'not_evaluated' | 'compliant' | 'out_of_range'
 
 export interface TenantRow {
   id: string
@@ -96,4 +111,84 @@ export interface WorkOrderRow {
   created_by: string | null
   created_at: string
   updated_at: string
+}
+
+export interface MeasurementParameterRow {
+  id: string
+  tenant_id: string
+  code: string
+  name: string
+  quantity: string
+  default_unit_id: string
+  hard_min_value: number | null
+  hard_max_value: number | null
+  is_active: boolean
+}
+
+export interface MeasurementPointRow {
+  id: string
+  tenant_id: string
+  code: string
+  name: string
+  group_code: string
+  scope_type: 'session' | 'shift' | 'location'
+  suggested_parameter_code: string | null
+  sequence: number
+  is_active: boolean
+}
+
+export interface MeasurementTargetRow {
+  id: string
+  tenant_id: string
+  parameter_id: string
+  point_id: string | null
+  site_id: string | null
+  location_id: string | null
+  asset_id: string | null
+  unit_id: string
+  target_value: number | null
+  min_value: number | null
+  max_value: number | null
+  tolerance_percent: number | null
+  valid_from: string
+  valid_to: string | null
+  is_active: boolean
+}
+
+export interface MeasurementSessionRow {
+  id: string
+  tenant_id: string
+  code: string | null
+  session_type: 'hydraulic_control' | 'water_quality' | 'piezometer' | 'operational' | 'other'
+  status: MeasurementSessionStatus
+  site_id: string | null
+  location_id: string | null
+  occurred_at: string
+  responsible_name: string | null
+  source_type: MeasurementSourceType
+  source_system: string
+  created_by: string
+  validated_by: string | null
+  validated_at: string | null
+}
+
+export interface OperationalReadingRow {
+  id: string
+  tenant_id: string
+  session_id: string
+  sample_id: string
+  parameter_id: string
+  point_id: string
+  unit_id: string
+  location_id: string | null
+  value: number
+  measured_at: string
+  source_type: MeasurementSourceType
+  source_system: string
+  target_value_snapshot: number | null
+  min_value_snapshot: number | null
+  max_value_snapshot: number | null
+  deviation_value: number | null
+  deviation_percent: number | null
+  compliance_status: MeasurementComplianceStatus
 }
