@@ -43,7 +43,7 @@ export default async function WorkOrdersPage() {
   const canManage = ['owner', 'admin', 'planner', 'supervisor'].includes(role)
   const now = new Date()
 
-  const [{ data: orders }, { data: assets }, { data: members }] = await Promise.all([
+  const [{ data: orders }, { data: assets }, { data: members }, { data: automation }] = await Promise.all([
     supabase
       .from('work_orders')
       .select('id,asset_id,assigned_to,code,title,status,priority,maintenance_type,source,scheduled_at,due_at,due_meter,created_at')
@@ -59,6 +59,13 @@ export default async function WorkOrdersPage() {
       .select('user_id,role,is_active')
       .eq('tenant_id', tenant.id)
       .eq('is_active', true),
+    supabase
+      .from('maintenance_automation_runs')
+      .select('started_at,completed_at,generated_count,status,error_message')
+      .eq('tenant_id', tenant.id)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   const memberIds = (members ?? []).map((member) => member.user_id)
@@ -85,13 +92,13 @@ export default async function WorkOrdersPage() {
           <div>
             <span className="badge">Órdenes de trabajo</span>
             <h1>Centro de ejecución</h1>
-            <p className="muted">{tenant.name} · planificación, asignación y ejecución de mantenimiento.</p>
+            <p className="muted">{tenant.name} · generación automática cada 5 minutos, asignación y ejecución.</p>
           </div>
           <div className={styles.heroActions}>
             <Link href="/dashboard/plans" className="button button-secondary">Ver planes</Link>
             {canManage && (
               <form action={generateDueWorkOrders}>
-                <button className="button" type="submit">Generar OT vencidas</button>
+                <button className="button" type="submit">Ejecutar generador ahora</button>
               </form>
             )}
           </div>
@@ -104,6 +111,28 @@ export default async function WorkOrdersPage() {
           <div className={styles.metric}><span>Cerradas</span><strong>{closed}</strong></div>
         </section>
 
+        <section className="card">
+          <div className="section-heading">
+            <div>
+              <strong>Automatización de mantenimiento</strong>
+              <p className="muted small">
+                Supabase Cron revisa todos los planes activos cada 5 minutos y genera únicamente las ocurrencias que correspondan.
+              </p>
+            </div>
+            <div className="stack gap-6">
+              <span className={styles.pill}>
+                {automation ? (automation.status === 'success' ? 'Activa · última ejecución OK' : automation.status === 'failed' ? 'Revisar última ejecución' : 'Ejecutando') : 'Activa · esperando primera ejecución'}
+              </span>
+              {automation && (
+                <span className={styles.meta}>
+                  {formatDate(automation.completed_at ?? automation.started_at)} · {automation.generated_count} OT generadas
+                </span>
+              )}
+              {automation?.error_message && <span className={styles.overdue}>{automation.error_message}</span>}
+            </div>
+          </div>
+        </section>
+
         <section className="card stack">
           <div className="section-heading">
             <div>
@@ -114,7 +143,7 @@ export default async function WorkOrdersPage() {
 
           {rows.length === 0 ? (
             <div className={styles.empty}>
-              Aún no existen órdenes. Si ya tienes planes vencidos, usa “Generar OT vencidas”.
+              Aún no existen órdenes. La automatización creará las OT cuando una rutina alcance su fecha o umbral de medidor.
             </div>
           ) : (
             <div className={styles.list}>
