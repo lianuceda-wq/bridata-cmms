@@ -60,14 +60,14 @@ export default async function InspectionDetailPage({params}:{params:Promise<{id:
           <div className={styles.panelBody}>
             {(items??[]).map(item=>{
               const itemEvidence=evidenceByItem.get(item.id)??[]
-              const options=Array.isArray(item.options)?item.options.map(String):[]
+              const options:string[]=Array.isArray(item.options)?item.options.map((option:unknown)=>String(option)):[]
               return <article className={styles.item} key={item.id}>
                 <div className={styles.itemHead}><div className={styles.itemTitle}><span className={styles.index}>{item.sequence}</span><div><strong>{item.title}</strong><div className={styles.meta}>{item.instructions||'Sin instrucción'}{item.mandatory?' · obligatorio':''}{item.requires_evidence?' · exige evidencia':''}</div></div></div><span className={`${styles.result} ${resultClass(item.result_status)}`}>{item.result_status}</span></div>
                 {mutable&&<form action={updateInspectionItem} className={styles.response}>
                   <input type="hidden" name="run_id" value={id}/><input type="hidden" name="item_id" value={item.id}/><input type="hidden" name="response_type" value={item.response_type}/>
                   {item.response_type==='boolean'&&<select className="input" name="response_boolean" defaultValue={item.response_boolean===true?'true':item.response_boolean===false?'false':''} required={item.mandatory}><option value="">Seleccionar</option><option value="true">Sí</option><option value="false">No</option></select>}
                   {item.response_type==='number'&&<><input className="input" name="response_number" type="number" step="any" defaultValue={item.response_number??''} placeholder={`Valor${item.unit_id?` (${unitMap.get(item.unit_id)??''})`:''}`} required={item.mandatory}/><div className={styles.meta}>Rango: {item.min_value??'—'} a {item.max_value??'—'} {item.unit_id?unitMap.get(item.unit_id):''}</div></>}
-                  {item.response_type==='choice'&&<select className="input" name="response_text" defaultValue={item.response_text??''} required={item.mandatory}><option value="">Seleccionar</option>{options.map(option=><option key={option} value={option}>{option}</option>)}</select>}
+                  {item.response_type==='choice'&&<select className="input" name="response_text" defaultValue={item.response_text??''} required={item.mandatory}><option value="">Seleccionar</option>{options.map((option:string)=><option key={option} value={option}>{option}</option>)}</select>}
                   {['text','photo'].includes(item.response_type)&&<><input className="input" name="response_text" defaultValue={item.response_text??''} placeholder="Respuesta / comentario"/><select className="input" name="result_status" defaultValue={item.result_status==='pending'?'compliant':item.result_status}><option value="compliant">Conforme</option><option value="nonconforming">No conforme</option><option value="not_applicable">No aplica</option></select></>}
                   <textarea className={`input ${styles.full}`} name="notes" defaultValue={item.notes??''} rows={2} placeholder="Observación técnica"/>
                   <button className="button button-secondary" type="submit">Guardar respuesta</button>
