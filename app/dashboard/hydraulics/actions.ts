@@ -7,11 +7,22 @@ import { requireTenant } from '@/lib/tenant'
 const clean = (value: FormDataEntryValue | null) => String(value ?? '').trim()
 const nullable = (value: FormDataEntryValue | null) => clean(value) || null
 
+function localDateTimeToIso(value: string, offsetMinutes: number) {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/)
+  if (!match) throw new Error('Fecha/hora inválida.')
+  const [, year, month, day, hour, minute, second = '0'] = match
+  const localAsUtc = Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second))
+  return new Date(localAsUtc + offsetMinutes * 60_000).toISOString()
+}
+
 export async function createHydraulicControl(formData: FormData) {
   const { supabase, tenant } = await requireTenant()
   const siteId = clean(formData.get('site_id'))
   const occurredAt = clean(formData.get('occurred_at'))
   const rowsRaw = clean(formData.get('rows_json'))
+  const offsetRaw = clean(formData.get('timezone_offset_minutes'))
+  const timezoneOffset = Number(offsetRaw || '0')
+  if (!Number.isFinite(timezoneOffset) || Math.abs(timezoneOffset) > 14 * 60) throw new Error('Zona horaria inválida.')
   if (!siteId || !occurredAt || !rowsRaw) throw new Error('Fundo, fecha y lecturas son obligatorios.')
 
   let rows: unknown
@@ -26,7 +37,7 @@ export async function createHydraulicControl(formData: FormData) {
     p_tenant_id: tenant.id,
     p_site_id: siteId,
     p_location_id: nullable(formData.get('location_id')),
-    p_occurred_at: new Date(occurredAt).toISOString(),
+    p_occurred_at: localDateTimeToIso(occurredAt, timezoneOffset),
     p_responsible_name: nullable(formData.get('responsible_name')),
     p_notes: nullable(formData.get('notes')),
     p_rows: rows,
