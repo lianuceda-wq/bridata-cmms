@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createHydraulicControl } from './actions'
 import styles from './hydraulics.module.css'
 
@@ -77,6 +77,11 @@ export default function HydraulicCaptureForm({
   const [siteId, setSiteId] = useState(sites[0]?.id ?? '')
   const [headerLocationId, setHeaderLocationId] = useState('')
   const [rows, setRows] = useState<CaptureRow[]>([blankRow(1), blankRow(2), blankRow(3)])
+  const [timezoneOffset, setTimezoneOffset] = useState(0)
+
+  useEffect(() => {
+    setTimezoneOffset(new Date().getTimezoneOffset())
+  }, [])
 
   const headerLocations = useMemo(
     () => locations.filter((location) => location.site_id === siteId && ['parcel','sector','hydraulic_zone','area','system'].includes(location.location_type)),
@@ -92,7 +97,10 @@ export default function HydraulicCaptureForm({
 
   const configMap = useMemo(() => {
     const map = new Map<string, LocationConfig>()
-    const sorted = [...configs].sort((a, b) => b.valid_from.localeCompare(a.valid_from))
+    const today = new Date().toISOString().slice(0, 10)
+    const sorted = [...configs]
+      .filter((config) => config.valid_from <= today && (!config.valid_to || config.valid_to >= today))
+      .sort((a, b) => b.valid_from.localeCompare(a.valid_from))
     for (const config of sorted) if (!map.has(config.location_id)) map.set(config.location_id, config)
     return map
   }, [configs])
@@ -109,11 +117,9 @@ export default function HydraulicCaptureForm({
       const next = { ...row, [field]: value }
       if (field === 'location_id') {
         const config = configMap.get(value)
-        if (config) {
-          next.hose_model_id ||= config.hose_model_id ?? ''
-          next.valve_model_id ||= config.valve_model_id ?? ''
-          next.pilot_model_id ||= config.pilot_model_id ?? ''
-        }
+        next.hose_model_id = config?.hose_model_id ?? ''
+        next.valve_model_id = config?.valve_model_id ?? ''
+        next.pilot_model_id = config?.pilot_model_id ?? ''
       }
       return next
     }))
@@ -122,7 +128,7 @@ export default function HydraulicCaptureForm({
   function addRow() {
     setRows((current) => {
       const nextKey = Math.max(0, ...current.map((row) => row.key)) + 1
-      const lastShift = current.at(-1)?.shift_number || '1'
+      const lastShift = current.length ? current[current.length - 1].shift_number : '1'
       return [...current, blankRow(nextKey, lastShift)]
     })
   }
@@ -224,6 +230,7 @@ export default function HydraulicCaptureForm({
       <div className={styles.captureFooter}>
         <textarea className="input" name="notes" rows={2} placeholder="Observación general de la jornada" />
         <input type="hidden" name="rows_json" value={JSON.stringify(payload)} readOnly />
+        <input type="hidden" name="timezone_offset_minutes" value={timezoneOffset} readOnly />
         <div className={styles.submitActions}>
           <button className="button button-secondary" type="submit" name="submit_mode" value="draft">Guardar borrador</button>
           <button className="button" type="submit" name="submit_mode" value="submit">Guardar y enviar a validación</button>
