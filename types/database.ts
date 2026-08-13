@@ -30,6 +30,10 @@ export type MaintenanceTriggerType = 'calendar' | 'meter' | 'condition'
 export type MeasurementSourceType = 'manual' | 'import' | 'api' | 'sensor'
 export type MeasurementSessionStatus = 'draft' | 'submitted' | 'validated' | 'cancelled'
 export type MeasurementComplianceStatus = 'not_evaluated' | 'compliant' | 'out_of_range'
+export type FailureSeverity = 'low' | 'medium' | 'high' | 'critical'
+export type FailureStatus = 'open' | 'in_repair' | 'restored' | 'closed' | 'cancelled'
+export type FailureSource = 'manual' | 'inspection' | 'work_order' | 'api' | 'sensor'
+export type LaborWorkerType = 'employee' | 'contractor' | 'external'
 
 export interface TenantRow {
   id: string
@@ -191,4 +195,41 @@ export interface OperationalReadingRow {
   deviation_value: number | null
   deviation_percent: number | null
   compliance_status: MeasurementComplianceStatus
+}
+
+export interface FailureEventRow {
+  id: string
+  tenant_id: string
+  code: string | null
+  asset_id: string
+  site_id: string | null
+  location_id: string | null
+  failure_mode_id: string | null
+  failure_cause_id: string | null
+  severity: FailureSeverity
+  status: FailureStatus
+  source: FailureSource
+  symptom: string | null
+  description: string
+  occurred_at: string
+  reported_at: string
+  repair_started_at: string | null
+  restored_at: string | null
+  closed_at: string | null
+  root_cause_notes: string | null
+  created_by: string | null
+}
+
+export interface WorkOrderLaborSessionRow {
+  id: string
+  tenant_id: string
+  work_order_id: string
+  worker_user_id: string | null
+  worker_name: string | null
+  worker_type: LaborWorkerType
+  started_at: string
+  ended_at: string | null
+  labor_role: string | null
+  notes: string | null
+  created_by: string | null
 }

@@ -7,6 +7,7 @@ import {
   updateWorkOrderTask,
   uploadWorkOrderEvidence,
 } from '../actions'
+import LaborPanel from './LaborPanel'
 import styles from '../work-orders.module.css'
 
 const statusLabels: Record<string, string> = {
@@ -111,7 +112,7 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
           <div className={styles.heroActions}>
             <span className={styles.pill}>{order.priority}</span>
             <span className={styles.pill}>{order.maintenance_type}</span>
-            <span className={styles.pill}>{order.source === 'maintenance_plan' ? 'Automática' : 'Manual'}</span>
+            <span className={styles.pill}>{order.source === 'maintenance_plan' ? 'Automática' : order.source === 'failure' ? 'Desde falla' : 'Manual'}</span>
           </div>
         </section>
 
@@ -251,6 +252,8 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
               </div>
             </section>
 
+            <LaborPanel workOrderId={order.id} />
+
             <section className={styles.panel}>
               <div className={styles.panelHeader}><strong>Trazabilidad</strong></div>
               <div className={styles.panelBody}>
@@ -274,13 +277,14 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
             </section>
 
             <section className={styles.panel}>
-              <div className={styles.panelHeader}><strong>Tiempos</strong></div>
+              <div className={styles.panelHeader}><strong>Tiempos de la OT</strong></div>
               <div className={styles.panelBody}>
                 <div><div className={styles.meta}>Creada</div><span>{formatDate(order.created_at)}</span></div>
                 <div><div className={styles.meta}>Inicio</div><span>{formatDate(order.started_at)}</span></div>
                 <div><div className={styles.meta}>Completada</div><span>{formatDate(order.completed_at)}</span></div>
                 <div><div className={styles.meta}>Validada</div><span>{formatDate(order.validated_at)}</span></div>
                 <div><div className={styles.meta}>Cerrada</div><span>{formatDate(order.closed_at)}</span></div>
+                <p className="muted small">Estos tiempos alimentan ejecución y MTTR cuando la OT está vinculada a una falla. Las HH se calculan aparte desde las sesiones de mano de obra.</p>
               </div>
             </section>
           </aside>
