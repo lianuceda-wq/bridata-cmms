@@ -24,14 +24,13 @@ export async function generateDueWorkOrders() {
   const { supabase, tenant, role } = await requireTenant()
   assertManager(role)
 
-  const { data, error } = await supabase.rpc('generate_due_work_orders', {
+  const { error } = await supabase.rpc('generate_due_work_orders', {
     p_tenant_id: tenant.id,
     p_as_of: new Date().toISOString(),
   })
 
   if (error) throw new Error(error.message)
   refreshWorkOrders()
-  return Number(data ?? 0)
 }
 
 export async function assignWorkOrder(formData: FormData) {
