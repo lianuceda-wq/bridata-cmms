@@ -1,0 +1,1 @@
+create unique index uq_notifications_tenant_id on public.notifications(tenant_id,id);
