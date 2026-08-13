@@ -1,0 +1,1 @@
+create index idx_notifications_tenant_time on public.notifications(tenant_id,created_at desc);
