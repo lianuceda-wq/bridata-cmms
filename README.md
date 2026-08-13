@@ -3,7 +3,15 @@
 SaaS multi-tenant para gestión de mantenimiento de activos.
 
 ## Estado
-Starter técnico inicial: Next.js + Supabase + autenticación + esquema PostgreSQL multi-tenant + RLS.
+Fundación técnica validada: Next.js + Supabase + autenticación + PostgreSQL multi-tenant + RLS + jerarquía Fundo/Sede → Ubicación → Activo.
+
+## Validación realizada
+- TypeScript: PASS
+- Next.js build: PASS
+- RLS multi-tenant: PASS
+- Bloqueo de escritura cross-tenant: PASS
+- Onboarding `bootstrap_tenant`: PASS
+- Creación controlada sede → ubicación → activo: PASS
 
 ## Requisitos
 - Node.js LTS
@@ -29,11 +37,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 ```
 
 ## 3. Crear esquema
-Ejecuta el SQL de:
-
-`supabase/migrations/0001_initial.sql`
-
-en el SQL Editor de Supabase o mediante Supabase CLI.
+Las migraciones viven en `supabase/migrations/` y deben aplicarse en orden.
 
 ## 4. Ejecutar
 ```bash
@@ -60,4 +64,4 @@ Abrir `http://localhost:3000`.
 - Administración SaaS
 
 ## Seguridad
-El starter activa Row Level Security en las tablas operacionales y usa membresías por tenant. Antes de producción se deben agregar políticas específicas por rol para escritura, auditoría reforzada, rate limiting, pruebas de aislamiento y gestión segura de funciones administrativas.
+La aplicación usa Row Level Security como barrera principal de aislamiento por tenant. Las funciones `SECURITY DEFINER` están endurecidas, el acceso anónimo fue revocado y las políticas operacionales distinguen roles de administración, planificación, supervisión, técnico y lectura.
