@@ -2,9 +2,14 @@ import { requireTenant } from '@/lib/tenant'
 import { createAsset, createLocation, createSite, deleteAsset, updateAssetStatus } from './actions'
 
 const locationLabels: Record<string, string> = {
+  farm: 'Fundo',
   area: 'Área',
   system: 'Sistema',
   sector: 'Sector',
+  parcel: 'Parcela',
+  lot: 'Lote',
+  pumping_station: 'Estación de bombeo',
+  hydraulic_zone: 'Zona hidráulica',
   room: 'Sala/Caseta',
   line: 'Línea',
   warehouse: 'Almacén',
@@ -34,7 +39,7 @@ export default async function AssetsPage() {
       <div className="header">
         <div>
           <span className="badge">Activos</span>
-          <h1>Jerarquía de activos</h1>
+          <h1>Jerarquía de activos y ubicaciones</h1>
           <p className="muted">{tenant.name} · rol {role}</p>
         </div>
         <div className="summary-chip">{assetRows.length} activos</div>
@@ -45,7 +50,7 @@ export default async function AssetsPage() {
           <form action={createSite} className="card stack">
             <div>
               <strong>1. Fundo / sede</strong>
-              <p className="muted small">Nivel físico principal.</p>
+              <p className="muted small">Nivel físico principal de operación.</p>
             </div>
             <input className="input" name="name" placeholder="Ej. Yakuy Minka" required />
             <input className="input" name="code" placeholder="Código opcional" />
@@ -55,7 +60,7 @@ export default async function AssetsPage() {
           <form action={createLocation} className="card stack">
             <div>
               <strong>2. Ubicación</strong>
-              <p className="muted small">Área, sistema, sector, caseta o línea.</p>
+              <p className="muted small">Parcela, sector, lote, sistema, estación de bombeo u otra ubicación operacional.</p>
             </div>
             <select className="input" name="site_id" required defaultValue="">
               <option value="" disabled>Selecciona fundo/sede</option>
@@ -63,7 +68,7 @@ export default async function AssetsPage() {
             </select>
             <select className="input" name="parent_location_id" defaultValue="">
               <option value="">Sin ubicación padre</option>
-              {locationRows.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
+              {locationRows.map((location) => <option key={location.id} value={location.id}>{locationLabels[location.location_type] ?? location.location_type} · {location.code || location.name}</option>)}
             </select>
             <div className="form-grid">
               <input className="input" name="name" placeholder="Nombre" required />
@@ -90,7 +95,7 @@ export default async function AssetsPage() {
             </select>
             <select className="input" name="location_id" defaultValue="">
               <option value="">Sin ubicación específica</option>
-              {locationRows.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
+              {locationRows.map((location) => <option key={location.id} value={location.id}>{location.code ? `${location.code} · ` : ''}{location.name}</option>)}
             </select>
             <select className="input" name="parent_asset_id" defaultValue="">
               <option value="">Activo raíz</option>
