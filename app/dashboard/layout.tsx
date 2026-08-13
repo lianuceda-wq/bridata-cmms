@@ -48,6 +48,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <Link href="/dashboard/resources" className="nav-link">Herramientas y EPP</Link>
           <Link href="/dashboard/documents" className="nav-link">Documentos</Link>
           {canAnalytics && <Link href="/dashboard/analytics" className="nav-link">Analítica y presupuesto</Link>}
+          {canAnalytics && <Link href="/dashboard/reports" className="nav-link">Reportes y exportaciones</Link>}
           {canConfigure && <Link href="/dashboard/settings/measurements" className="nav-link">Nominales y parámetros</Link>}
           {canAdmin && <Link href="/dashboard/admin" className="nav-link">Administración</Link>}
         </nav>
