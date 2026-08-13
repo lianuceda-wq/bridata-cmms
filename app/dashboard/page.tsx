@@ -21,7 +21,8 @@ export default async function DashboardPage() {
         </div>
         <div className="inline-form">
           <Link href="/dashboard/assets" className="button button-secondary">Activos</Link>
-          <Link href="/dashboard/plans" className="button">Planes</Link>
+          <Link href="/dashboard/plans" className="button button-secondary">Planes</Link>
+          <Link href="/dashboard/work-orders" className="button">Órdenes de trabajo</Link>
         </div>
       </div>
 
@@ -49,6 +50,15 @@ export default async function DashboardPage() {
               <p className="muted small">Configura rutinas por calendario, horómetro, ciclos, km o m³.</p>
             </div>
             <Link href="/dashboard/plans" className="button button-secondary">Abrir planes</Link>
+          </div>
+        </div>
+        <div className="card">
+          <div className="section-heading">
+            <div>
+              <strong>Ejecución operacional</strong>
+              <p className="muted small">Genera, asigna, ejecuta, valida y cierra órdenes con trazabilidad.</p>
+            </div>
+            <Link href="/dashboard/work-orders" className="button button-secondary">Abrir OT</Link>
           </div>
         </div>
       </section>
