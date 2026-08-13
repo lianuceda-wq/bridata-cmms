@@ -1,0 +1,42 @@
+import { requireTenant } from '@/lib/tenant'
+import { addManualWorkOrderCost, consumeWorkOrderMaterial, releaseReservation, reserveWorkOrderMaterial } from '../../inventory/actions'
+import styles from './materials.module.css'
+
+function money(value:number|null|undefined,currency='PEN'){return value===null||value===undefined?'—':new Intl.NumberFormat('es-PE',{style:'currency',currency}).format(Number(value))}
+function date(value:string|null){return value?new Intl.DateTimeFormat('es-PE',{timeZone:'America/Lima',dateStyle:'short',timeStyle:'short'}).format(new Date(value)):'—'}
+
+export default async function MaterialCostPanel({workOrderId}:{workOrderId:string}){
+ const {supabase,tenant,user,role}=await requireTenant()
+ const [{data:order},{data:materials},{data:warehouses},{data:stock},{data:reservations},{data:consumptions},{data:costs},{data:costSummary}] = await Promise.all([
+  supabase.from('work_orders').select('id,status,assigned_to').eq('tenant_id',tenant.id).eq('id',workOrderId).maybeSingle(),
+  supabase.from('materials').select('id,code,name,unit_id').eq('tenant_id',tenant.id).eq('is_active',true).order('code'),
+  supabase.from('warehouses').select('id,code,name').eq('tenant_id',tenant.id).eq('is_active',true).order('name'),
+  supabase.from('inventory_status').select('warehouse_id,material_id,available_quantity,quantity_on_hand,reserved_quantity,unit_symbol').eq('tenant_id',tenant.id),
+  supabase.from('inventory_reservations').select('id,warehouse_id,material_id,quantity_reserved,quantity_consumed,status,created_at').eq('tenant_id',tenant.id).eq('work_order_id',workOrderId).order('created_at',{ascending:false}),
+  supabase.from('material_consumptions').select('id,movement_code,warehouse_id,material_id,quantity,unit_cost,currency,total_cost,occurred_at').eq('tenant_id',tenant.id).eq('work_order_id',workOrderId).order('occurred_at',{ascending:false}),
+  supabase.from('cost_entries').select('id,category,amount,currency,valuation_status,description,occurred_at').eq('tenant_id',tenant.id).eq('work_order_id',workOrderId).order('occurred_at',{ascending:false}),
+  supabase.from('work_order_cost_summary').select('currency,total_cost,material_cost,labor_cost,external_cost,missing_valuations').eq('tenant_id',tenant.id).eq('work_order_id',workOrderId),
+ ])
+ if(!order)return null
+ const materialRows=materials??[],warehouseRows=warehouses??[],stockRows=stock??[],reservationRows=reservations??[],consumptionRows=consumptions??[],costRows=costs??[],summaryRows=costSummary??[]
+ const materialMap=new Map(materialRows.map(m=>[m.id,m]));const warehouseMap=new Map(warehouseRows.map(w=>[w.id,w]));const stockMap=new Map(stockRows.map(s=>[`${s.warehouse_id}:${s.material_id}`,s]))
+ const manager=['owner','admin','planner','supervisor','warehouse'].includes(role);const technician=role==='technician'&&order.assigned_to===user.id;const mutable=!['closed','cancelled'].includes(order.status);const canConsume=mutable&&(manager||technician);const canReserve=mutable&&manager
+ return <section className={styles.panel}>
+  <div className={styles.header}><div><strong>Materiales y costos</strong><span>Stock y costo conectados a la OT</span></div><div className={styles.summary}>{summaryRows.length?summaryRows.map(s=><b key={s.currency}>{money(s.total_cost,s.currency)}</b>):<b>Sin costo</b>}<small>{summaryRows.reduce((n,s)=>n+Number(s.missing_valuations??0),0)} sin valorar</small></div></div>
+  <div className={styles.body}>
+   {canReserve&&<form action={reserveWorkOrderMaterial} className={styles.form}><input type="hidden" name="work_order_id" value={workOrderId}/><select className="input" name="warehouse_id" required defaultValue=""><option value="" disabled>Almacén</option>{warehouseRows.map(w=><option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</select><select className="input" name="material_id" required defaultValue=""><option value="" disabled>Material a reservar</option>{materialRows.map(m=><option key={m.id} value={m.id}>{m.code} · {m.name}</option>)}</select><input className="input" name="quantity" type="number" min="0.000001" step="any" placeholder="Cantidad" required/><button className="button button-secondary" type="submit">Reservar</button></form>}
+
+   {reservationRows.filter(r=>r.status==='active').length>0&&<div className={styles.list}><strong className={styles.sectionTitle}>Reservas activas</strong>{reservationRows.filter(r=>r.status==='active').map(r=>{const m=materialMap.get(r.material_id),w=warehouseMap.get(r.warehouse_id),remaining=Number(r.quantity_reserved)-Number(r.quantity_consumed);return <div className={styles.reservation} key={r.id}><div><b>{m?.code} · {m?.name}</b><span>{w?.code} · reservado {r.quantity_reserved}, usado {r.quantity_consumed}, pendiente {remaining}</span></div>{canConsume&&<form action={consumeWorkOrderMaterial} className={styles.inline}><input type="hidden" name="work_order_id" value={workOrderId}/><input type="hidden" name="warehouse_id" value={r.warehouse_id}/><input type="hidden" name="material_id" value={r.material_id}/><input type="hidden" name="reservation_id" value={r.id}/><input className="input input-compact" name="quantity" type="number" min="0.000001" max={remaining} step="any" placeholder="Consumir" required/><button className="button button-compact" type="submit">Usar</button></form>}{canReserve&&<form action={releaseReservation}><input type="hidden" name="work_order_id" value={workOrderId}/><input type="hidden" name="reservation_id" value={r.id}/><button className="button button-secondary button-compact" type="submit">Liberar</button></form>}</div>})}</div>}
+
+   {canConsume&&<form action={consumeWorkOrderMaterial} className={styles.form}><input type="hidden" name="work_order_id" value={workOrderId}/><select className="input" name="warehouse_id" required defaultValue=""><option value="" disabled>Almacén</option>{warehouseRows.map(w=><option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</select><select className="input" name="material_id" required defaultValue=""><option value="" disabled>Consumo sin reserva</option>{materialRows.map(m=><option key={m.id} value={m.id}>{m.code} · {m.name}</option>)}</select><input className="input" name="quantity" type="number" min="0.000001" step="any" placeholder="Cantidad" required/><input className="input" name="notes" placeholder="Observación"/><button className="button button-secondary" type="submit">Consumir material</button></form>}
+
+   {consumptionRows.length>0&&<div className={styles.list}><strong className={styles.sectionTitle}>Consumos</strong>{consumptionRows.map(c=>{const m=materialMap.get(c.material_id),w=warehouseMap.get(c.warehouse_id);return <div className={styles.costRow} key={c.id}><div><b>{c.movement_code} · {m?.code}</b><span>{w?.code} · {c.quantity} · {date(c.occurred_at)}</span></div><strong>{money(c.total_cost,c.currency)}</strong></div>})}</div>}
+
+   {manager&&mutable&&<form action={addManualWorkOrderCost} className={styles.form}><input type="hidden" name="work_order_id" value={workOrderId}/><select className="input" name="category" defaultValue="service"><option value="labor">Mano de obra valorizada</option><option value="service">Servicio</option><option value="contractor">Contratista</option><option value="other">Otro</option></select><input className="input" name="amount" type="number" min="0" step="any" placeholder="Monto" required/><input className="input" name="currency" defaultValue="PEN" maxLength={3}/><input className="input" name="description" placeholder="Descripción del costo"/><button className="button button-secondary" type="submit">Agregar costo</button></form>}
+
+   {costRows.length>0&&<div className={styles.list}><strong className={styles.sectionTitle}>Detalle de costos</strong>{costRows.map(c=><div className={styles.costRow} key={c.id}><div><b>{c.category}</b><span>{c.description||c.valuation_status} · {date(c.occurred_at)}</span></div><strong>{money(c.amount,c.currency)}</strong></div>)}</div>}
+
+   {stockRows.length>0&&<details className={styles.stockDetails}><summary>Disponibilidad por almacén</summary><div className={styles.stockGrid}>{stockRows.filter(s=>Number(s.quantity_on_hand)>0||Number(s.reserved_quantity)>0).map(s=>{const m=materialMap.get(s.material_id),w=warehouseMap.get(s.warehouse_id);return <span key={`${s.warehouse_id}-${s.material_id}`}><b>{m?.code}</b> · {w?.code}: {s.available_quantity} {s.unit_symbol}</span>})}</div></details>}
+  </div>
+ </section>
+}
