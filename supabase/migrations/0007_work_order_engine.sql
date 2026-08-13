@@ -54,14 +54,15 @@ alter table public.work_orders
   add column cancelled_at timestamptz,
   add column cancellation_reason text,
   add column actual_minutes integer check (actual_minutes is null or actual_minutes >= 0),
+  add constraint work_orders_tenant_id_id_key unique (tenant_id, id),
   add constraint work_orders_tenant_routine_fk
     foreign key (tenant_id, routine_id)
     references public.maintenance_routines(tenant_id, id)
-    on delete set null,
+    on delete restrict,
   add constraint work_orders_tenant_schedule_state_fk
     foreign key (tenant_id, schedule_state_id)
     references public.maintenance_schedule_states(tenant_id, id)
-    on delete set null,
+    on delete restrict,
   add constraint work_orders_tenant_assignee_fk
     foreign key (tenant_id, assigned_to)
     references public.tenant_members(tenant_id, user_id)
@@ -115,6 +116,7 @@ create table public.work_order_tasks (
   completed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  unique (tenant_id, work_order_id, id),
   check (min_value is null or max_value is null or min_value <= max_value)
 );
 
@@ -154,8 +156,8 @@ alter table public.work_order_evidence
     references public.work_orders(tenant_id, id)
     on delete cascade,
   add constraint work_order_evidence_tenant_task_fk
-    foreign key (tenant_id, task_id)
-    references public.work_order_tasks(tenant_id, id)
+    foreign key (tenant_id, work_order_id, task_id)
+    references public.work_order_tasks(tenant_id, work_order_id, id)
     on delete cascade;
 
 create index idx_work_order_evidence_work_order on public.work_order_evidence(tenant_id, work_order_id);
@@ -456,7 +458,7 @@ create or replace function public.generate_due_work_orders(
 )
 returns integer
 language plpgsql
-security invoker
+security definer
 set search_path = public, pg_temp
 as $$
 declare
@@ -704,5 +706,3 @@ revoke insert, update, delete on public.work_order_status_history from authentic
 grant select, insert, update, delete on public.work_order_tasks to authenticated;
 grant select, insert, delete on public.work_order_evidence to authenticated;
 grant select on public.work_order_status_history to authenticated;
-
-grant usage, select on sequence public.work_order_status_history_id_seq to authenticated;
