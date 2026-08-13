@@ -83,7 +83,7 @@ export async function createHydraulicComponentModel(formData: FormData) {
 }
 
 export async function saveLocationHydraulicConfig(formData: FormData) {
-  const { supabase, tenant, user, role } = await requireTenant()
+  const { supabase, tenant, role } = await requireTenant()
   if (!['owner', 'admin', 'planner', 'supervisor'].includes(role)) {
     throw new Error('No tienes permisos para configurar lotes.')
   }
@@ -92,15 +92,14 @@ export async function saveLocationHydraulicConfig(formData: FormData) {
   const validFrom = clean(formData.get('valid_from'))
   if (!locationId || !validFrom) throw new Error('Ubicación y vigencia son obligatorias.')
 
-  const { error } = await supabase.from('hydraulic_location_configs').insert({
-    tenant_id: tenant.id,
-    location_id: locationId,
-    hose_model_id: nullable(formData.get('hose_model_id')),
-    valve_model_id: nullable(formData.get('valve_model_id')),
-    pilot_model_id: nullable(formData.get('pilot_model_id')),
-    valid_from: validFrom,
-    notes: nullable(formData.get('notes')),
-    created_by: user.id,
+  const { error } = await supabase.rpc('create_hydraulic_location_config_version', {
+    p_tenant_id: tenant.id,
+    p_location_id: locationId,
+    p_hose_model_id: nullable(formData.get('hose_model_id')),
+    p_valve_model_id: nullable(formData.get('valve_model_id')),
+    p_pilot_model_id: nullable(formData.get('pilot_model_id')),
+    p_valid_from: validFrom,
+    p_notes: nullable(formData.get('notes')),
   })
 
   if (error) throw new Error(error.message)
